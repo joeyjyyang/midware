@@ -2,18 +2,17 @@
 #include <cassert>
 #include <iostream>
 #include <memory>
-
-// Next steps:
-// 1. How to add multiple items?
-// 2. How to add item with different sizes?
+#include <mutex>
 
 constexpr std::size_t BUFFER_SIZE{6}; 
 
-template <typename T, std::size_t N>
+template <typename T>
 class CircularBuffer // CircularQueue, RingBuffer
 {
 public:
-    CircularBuffer() = default;
+    CircularBuffer() : buffer_(std::make_unique<T[]>(BUFFER_SIZE))
+    {
+    }
 
     inline bool isFull() const
     {
@@ -27,10 +26,12 @@ public:
 
     inline T read()
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         if (isEmpty())
         {
             assert(reader_tail_ == writer_head_);
-            std::cout << "Empty; nothing to read.\n";
+            std::cout << "Buffer is empty. Unable to read.\n";
 
             return -1;
         }
@@ -46,10 +47,12 @@ public:
 
     inline void write(T item)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         if (isFull())
         {
             assert(reader_tail_ == writer_head_);
-            std::cout << "Full; unable to write.\n";
+            std::cout << "Buffer is full. Unable to write.\n";
 
             return;
         }
@@ -61,19 +64,20 @@ public:
         ++buffer_length_;
     }
 
-    template <typename TFriend, std::size_t NFriend>
-    friend void printBuffer(const CircularBuffer<TFriend, NFriend>& circular_buffer);
+    template <typename TFriend>
+    friend void printBuffer(const CircularBuffer<TFriend>& circular_buffer);
 
 private:
-    std::array<T, N> buffer_{};
-    std::size_t buffer_size_{N};
+    std::unique_ptr<T[]> buffer_;
+    std::size_t buffer_size_{BUFFER_SIZE};
     int buffer_length_{0};
     int reader_tail_{0};
     int writer_head_{0};
+    std::mutex mutex_;
 };
 
-template <typename TFriend, std::size_t NFriend>
-void printBuffer(const CircularBuffer<TFriend, NFriend>& circular_buffer)
+template <typename TFriend>
+void printBuffer(const CircularBuffer<TFriend>& circular_buffer)
 {
     std::cout << "Buffer size   : " << circular_buffer.buffer_size_ << "\n";
     std::cout << "Buffer length : " << circular_buffer.buffer_length_ << "\n";
@@ -90,9 +94,9 @@ void printBuffer(const CircularBuffer<TFriend, NFriend>& circular_buffer)
     std::cout << "\n";
     std::cout << "Items         : ";
 
-    for (const auto& item : circular_buffer.buffer_)
+    for (unsigned int i = 0; i < circular_buffer.buffer_size_; ++i)
     {
-        std::cout << item << " ";
+        std::cout << circular_buffer.buffer_[i] << " ";
     }
 
     std::cout << "\n";
@@ -100,9 +104,9 @@ void printBuffer(const CircularBuffer<TFriend, NFriend>& circular_buffer)
 
 int main()
 {
-    CircularBuffer<int, BUFFER_SIZE> circular_buffer;
+    CircularBuffer<int> circular_buffer;
 
-    //printBuffer(circular_buffer);
+    printBuffer(circular_buffer);
 
     circular_buffer.read();
     circular_buffer.write(1);
