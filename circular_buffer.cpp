@@ -39,8 +39,10 @@ public:
         T item = buffer_[reader_tail_];
         ++reader_tail_;
         reader_tail_ %= buffer_size_;
+        assert(reader_tail_ < buffer_size_);
 
         --buffer_length_;
+        assert(buffer_length_ >= 0);
 
         return item;
     }
@@ -60,8 +62,10 @@ public:
         buffer_[writer_head_] = item;
         ++writer_head_;
         writer_head_ %= buffer_size_;
+        assert(writer_head_ < buffer_size_);
 
         ++buffer_length_;
+        assert(buffer_length_ <= buffer_size_);
     }
 
     template <typename TFriend>
