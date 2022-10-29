@@ -7,10 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(cppzmq)
 
+add_executable(csv_parser csv_parser.cpp)
 add_executable(circular_buffer circular_buffer.cpp)
 add_executable(server server.cpp)
 add_executable(client client.cpp)
 
+target_link_libraries(csv_parser)
 target_link_libraries(circular_buffer cppzmq)
 target_link_libraries(server cppzmq)
 target_link_libraries(client cppzmq)
