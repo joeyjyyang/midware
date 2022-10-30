@@ -1,34 +1,40 @@
-#include <string>
 #include <iostream>
+#include <string>
 
 #include <zmq.hpp>
 
+class Client
+{
+public:
+    Client(const std::string address) : address_(address), socket_(zmq::socket_t{context_, zmq::socket_type::req})
+    {
+        socket_.connect(address);
+    }
+
+    void sendRequest(const std::string request)
+    {
+        //zmq::message_t{"test"};
+        std::cout << "Client sending: " << request << "\n";
+        socket_.send(zmq::buffer(request), zmq::send_flags::none);
+        
+        zmq::message_t reply{};
+        const auto result = socket_.recv(reply, zmq::recv_flags::none);
+
+        std::cout << "Client received: " << reply.to_string() << "\n";
+    }
+
+private:
+    zmq::context_t context_{};
+    zmq::socket_t socket_{};
+    std::string address_{};
+};
+
 int main()
 {
-    // initialize the zmq context with a single IO thread
-    zmq::context_t context{1};
+    const std::string address{"tcp://localhost:5555"};
 
-    // construct a REQ (request) socket and connect to interface
-    zmq::socket_t socket{context, zmq::socket_type::req};
-    socket.connect("tcp://localhost:5555");
-
-    // set up some static data to send
-    const std::string data{"Hello"};
-
-    for (auto request_num = 0; request_num < 10; ++request_num) 
-    {
-        // send the request message
-        std::cout << "Sending Hello " << request_num << "..." << std::endl;
-        socket.send(zmq::buffer(data), zmq::send_flags::none);
-        
-        // wait for reply from server
-        zmq::message_t reply{};
-        socket.recv(reply, zmq::recv_flags::none);
-
-        std::cout << "Received " << reply.to_string(); 
-        std::cout << " (" << request_num << ")";
-        std::cout << std::endl;
-    }
+    Client client(address);
+    client.sendRequest("test");
 
     return 0;
 }
