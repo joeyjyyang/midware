@@ -9,10 +9,25 @@
 class Client
 {
 public:
-    Client(const std::string endpoint) : endpoint(endpoint), socket_(zmq::socket_t{context_, zmq::socket_type::req})
+    // User must use default constructor defined below.
+    Client() = delete;
+
+    Client(const std::string endpoint) : endpoint_(endpoint), socket_(zmq::socket_t{context_, zmq::socket_type::req})
     {
-        socket_.connect(endpoint);
+        socket_.connect(endpoint_);
     }
+
+    // zmq::context_t copy constructor is deleted.
+    Client(const Client& other) = delete;
+
+    // zmq::context_t copy assignment operator is deleted.
+    Client& operator=(const Client& other) = delete;
+
+    // zmq::context_t move constructor is deleted.
+    Client(Client&& other) noexcept = delete;
+
+    // zmq::context_t move assignment operator is deleted.
+    Client& operator=(Client&& other) noexcept = delete;
 
     void sendRequest(const std::string request)
     {
@@ -29,14 +44,14 @@ public:
 private:
     zmq::context_t context_{};
     zmq::socket_t socket_;
-    std::string endpoint;
+    std::string endpoint_;
 };
 
-int main()
+/*int main()
 {
     const std::string endpoint{"tcp://localhost:5555"};
 
-    Client client(endpoint);
+    Client client1(endpoint);
 
     int num_requests{0};
 
@@ -45,8 +60,8 @@ int main()
 
     for (int i = 0; i < num_requests; i++)
     {
-        client.sendRequest("Message #" + std::to_string(i));
+        client1.sendRequest("Message #" + std::to_string(i));
     }
 
     return 0;
-}
+}*/
