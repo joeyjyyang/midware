@@ -6,8 +6,6 @@
 
 int main(int argc, char* argv[])
 {
-    FileParser file_parser;
-
     const std::string file_name{"../data.csv"};
     std::ifstream file{};
     
