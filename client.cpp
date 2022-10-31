@@ -47,7 +47,7 @@ private:
     std::string endpoint_;
 };
 
-/*int main()
+/*int main(int argc, char* argv[])
 {
     const std::string endpoint{"tcp://localhost:5555"};
 

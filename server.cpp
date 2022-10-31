@@ -41,7 +41,7 @@ public:
         {
             zmq::message_t request{};
             const auto result = socket_.recv(request, zmq::recv_flags::none);
-            const std::string deserialized_request{request.to_string()}; //{deserialize(reply.to_string())};
+            const std::string deserialized_request{request.to_string()}; //{deserialize(request.to_string())};
             std::cout << "Server received: " << deserialized_request << " from client.\n";
 
             // Do some processing.
@@ -70,7 +70,7 @@ private:
     return reply;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     const std::string endpoint = "tcp://*:5555";
     Server<std::string> server(endpoint, testCallback);
