@@ -60,7 +60,7 @@ private:
     CallbackType callback_;
 };
 
-std::string testCallback(std::string request)
+/*std::string testCallback(std::string request)
 {
     // Do some work.
 
@@ -70,7 +70,7 @@ std::string testCallback(std::string request)
     return reply;
 }
 
-/*int main()
+int main()
 {
     const std::string endpoint = "tcp://*:5555";
     Server<std::string> server(endpoint, testCallback);
