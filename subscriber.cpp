@@ -1,40 +1,29 @@
-#include <functional>
-#include <iostream>
-#include <string>
+#include "headers.hpp"
 
-#include <zmq.hpp>
-
-//#include "deserializer.cpp"
-//#include "serializer.hpp"
-
-template <typename TCallbackReturnType>
 class Subscriber
 {
 public:
-    // Alias for callback function object/functor type.
-    using CallbackType = std::function<TCallbackReturnType(std::string)>;
-
     // User must use default constructor defined below.
     Subscriber() = delete;
 
-    Subscriber(const std::string endpoint, const CallbackType& callback) : endpoint_(endpoint), callback_(callback), socket_(zmq::socket_t{context_, zmq::socket_type::sub})
+    Subscriber(zmq::context_t& context, const std::string endpoint, const std::function<std::string(std::string)>& callback) : endpoint_(endpoint), callback_(callback), socket_(zmq::socket_t{context, zmq::socket_type::sub})
     {
         socket_.connect(endpoint_);
-        socket_.set(zmq::sockopt::subscribe, ""); // Depra socket_.setsockopt(ZMQ_SUBSCRIBE, "", 0)
+        socket_.set(zmq::sockopt::subscribe, ""); // Deprecated: socket_.setsockopt(ZMQ_SUBSCRIBE, "", 0)
         spin();
     }
 
     // zmq::context_t copy constructor is deleted.
-    Subscriber(const Subscriber& other) = delete;
+    //Subscriber(const Subscriber& other) = delete;
 
     // zmq::context_t copy assignment operator is deleted.
-    Subscriber& operator=(const Subscriber& other) = delete;
+    //Subscriber& operator=(const Subscriber& other) = delete;
 
     // zmq::context_t move constructor is deleted.
-    Subscriber(Subscriber&& other) noexcept = delete;
+    //Subscriber(Subscriber&& other) noexcept = delete;
 
     // zmq::context_t move assignment operator is deleted.
-    Subscriber& operator=(Subscriber&& other) noexcept = delete;
+    //Subscriber& operator=(Subscriber&& other) noexcept = delete;
 
     void spin()
     {
@@ -46,32 +35,12 @@ public:
             std::cout << "Subscriber received: " << deserialized_message << ".\n";
 
             // Do some processing.
-            const TCallbackReturnType& reply = callback_(deserialized_message);
+            const std::string reply = callback_(deserialized_message);
         }
     }
 
 private:
-    zmq::context_t context_{};
     zmq::socket_t socket_;
     std::string endpoint_;
-    CallbackType callback_;
+    std::function<std::string(std::string)> callback_;
 };
-
-/*std::string testCallback(std::string message)
-{
-    // Do some work.
-
-    std::cout << "Processing message from publisher: " << message << "...\n";
-    const std::string reply = "Processed " + message;
-
-    return reply;
-}
-
-int main(int argc, char* argv[])
-{
-    const std::string endpoint{"tcp://localhost:5556"};
-
-    Subscriber<std::string> subscriber(endpoint, testCallback);
-
-    return 0;
-}*/
