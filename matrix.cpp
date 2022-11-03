@@ -32,11 +32,14 @@ public:
         return *this; 
     }
 
-    /*~Matrix()
-    {
-        //delete matrix_;
-        matrix_ = nullptr;
-    }
+    // Move constructor.
+    Matrix(Matrix&& other) = default;
+
+    // Move assignment operator.
+    Matrix& operator=(Matrix&& other) = default;
+
+    // Destructor.
+    ~Matrix() = default;
 
     Matrix operator*=(Matrix& other)
     {
@@ -55,7 +58,7 @@ public:
     Matrix& crossProduct(Matrix& other)
     {
         
-    }*/
+    }
 
     void print() const
     {
