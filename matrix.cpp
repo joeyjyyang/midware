@@ -3,18 +3,19 @@
 #include <stdexcept>
 #include <vector>
 
+template <typename T>
 class Matrix
 {
 public:
     // Alias for convenience.
-    using Matrix_t = std::vector<std::vector<double>>;
+    using Matrix_t = std::vector<std::vector<T>>;
 
     // Default constructor with no parameters.
-    Matrix() : num_rows_(0), num_cols_(0), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<double>(num_cols_, 0)))
+    Matrix() : num_rows_(0), num_cols_(0), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<T>(num_cols_, 0)))
     {}
 
     // Default constructor with desired dimensions and same initial value parameters.
-    Matrix(const size_t num_rows, const size_t num_cols, const double initial_value) : num_rows_(num_rows), num_cols_(num_cols), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<double>(num_cols_, initial_value))) {}
+    Matrix(const size_t num_rows, const size_t num_cols, const T initial_value) : num_rows_(num_rows), num_cols_(num_cols), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<T>(num_cols_, initial_value))) {}
 
     // Default constructor with desired dimensions and initial value parameters.
     Matrix(const Matrix_t& matrix) : num_rows_(matrix.size()), num_cols_(matrix[0].size()), matrix_(std::make_unique<Matrix_t>(matrix)) {}
@@ -70,7 +71,7 @@ public:
     }
 
     // Matrix multiplication with factor parameter.
-    Matrix operator*(double factor)
+    Matrix operator*(T factor)
     {
         Matrix product(*this);
 
@@ -86,14 +87,14 @@ public:
     }
 
     // Dot product.
-    double dotProduct(Matrix& other)
+    T dotProduct(Matrix& other)
     {
         if (num_rows_ != 1 || other.num_cols_ != 1 || num_cols_ != other.num_rows_)
         {
             throw std::invalid_argument("Left matrix must be vector of dimensions 1 x N, and right matrix must be vector of dimensions N x 1.");
         }
 
-        double dot_product{0};
+        T dot_product{0};
 
         for (int i = 0; i < num_cols_; i++)
         {
@@ -137,7 +138,7 @@ public:
     }
 
     // Utility method.
-    void setValue(const size_t row, const size_t col, const double value)
+    void setValue(const size_t row, const size_t col, const T value)
     {
         if (row < 0 || row >= num_rows_ || col < 0 || col >= num_cols_)
         {
@@ -156,34 +157,34 @@ private:
 int main(int argc, char* argv[])
 {
     {
-        Matrix matrix_a;
+        Matrix<double> matrix_a;
         matrix_a.print();
 
-        Matrix matrix_b(3, 2, 2.0);
+        Matrix<double> matrix_b(3, 2, 2.0);
         matrix_b.print();
 
-        Matrix matrix_c(matrix_b);
+        Matrix<double> matrix_c(matrix_b);
         matrix_c.print();
 
         matrix_a = matrix_c;
         matrix_a.print();
 
         std::vector<std::vector<double>> d{{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}};
-        Matrix matrix_d(d);
+        Matrix<double> matrix_d(d);
         matrix_d.print();
 
-        Matrix matrix_e = matrix_b * matrix_d;
+        Matrix<double> matrix_e = matrix_b * matrix_d;
         matrix_e.print();
 
-        Matrix matrix_f = matrix_e * 5;
+        Matrix<double> matrix_f = matrix_e * 5;
         matrix_f.print();
     }
 
     {
         std::vector<std::vector<double>> a{{1.0, 1.2, 0.5, 0.2, -0.4}};
         std::vector<std::vector<double>> b{{1.5}, {2.0}, {0.8}, {0.1}, {-0.5}};
-        Matrix matrix_a(a);
-        Matrix matrix_b(b);
+        Matrix<double> matrix_a(a);
+        Matrix<double> matrix_b(b);
         const double dot_product = matrix_a.dotProduct(matrix_b);
         std::cout << dot_product << "\n";
     }
@@ -191,9 +192,9 @@ int main(int argc, char* argv[])
     {
         std::vector<std::vector<double>> a{{1.0, 1.2, 0.5}};
         std::vector<std::vector<double>> b{{1.5, 2.0, 0.8}};
-        Matrix matrix_a(a);
-        Matrix matrix_b(b);
-        Matrix matrix_c = matrix_a.crossProduct(matrix_b);
+        Matrix<double> matrix_a(a);
+        Matrix<double> matrix_b(b);
+        Matrix<double> matrix_c = matrix_a.crossProduct(matrix_b);
         matrix_c.print();
     }
 
