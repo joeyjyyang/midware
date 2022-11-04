@@ -33,7 +33,7 @@ public:
             matrix_ = std::make_unique<Matrix_t>(*other.matrix_);
         }
 
-        return *this; 
+        return *this;
     }
 
     // Move constructor.
@@ -113,9 +113,9 @@ public:
 
         Matrix cross_product(num_rows_, num_cols_, 0);
 
-        (*cross_product.matrix_)[0][1] = (*matrix_)[0][1] * (*other.matrix_)[0][2] - (*matrix_)[0][2] * (*other.matrix_)[0][1];
-        (*cross_product.matrix_)[0][2] = (*matrix_)[0][2] * (*other.matrix_)[0][0] - (*matrix_)[0][0] * (*other.matrix_)[0][2];
-        (*cross_product.matrix_)[0][3] = (*matrix_)[0][0] * (*other.matrix_)[0][1] - (*matrix_)[0][1] * (*other.matrix_)[0][0];
+        (*cross_product.matrix_)[0][0] = (*matrix_)[0][1] * (*other.matrix_)[0][2] - (*matrix_)[0][2] * (*other.matrix_)[0][1];
+        (*cross_product.matrix_)[0][1] = (*matrix_)[0][2] * (*other.matrix_)[0][0] - (*matrix_)[0][0] * (*other.matrix_)[0][2];
+        (*cross_product.matrix_)[0][2] = (*matrix_)[0][0] * (*other.matrix_)[0][1] - (*matrix_)[0][1] * (*other.matrix_)[0][0];
 
         return cross_product;
     }
@@ -157,8 +157,8 @@ int main(int argc, char* argv[])
         matrix_a = matrix_c;
         matrix_a.print();
 
-        std::vector<std::vector<double>> matrix{{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}};
-        Matrix matrix_d(matrix);
+        std::vector<std::vector<double>> d{{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}};
+        Matrix matrix_d(d);
         matrix_d.print();
 
         Matrix matrix_e = matrix_b * matrix_d;
@@ -169,15 +169,19 @@ int main(int argc, char* argv[])
     }
 
     {
-        Matrix matrix_a(1, 6, 2.0);
-        Matrix matrix_b(6, 1, 2.5);
+        std::vector<std::vector<double>> a{{1.0, 1.2, 0.5, 0.2, -0.4}};
+        std::vector<std::vector<double>> b{{1.5}, {2.0}, {0.8}, {0.1}, {-0.5}};
+        Matrix matrix_a(a);
+        Matrix matrix_b(b);
         const double dot_product = matrix_a.dotProduct(matrix_b);
         std::cout << dot_product << "\n";
     }
 
     {
-        Matrix matrix_a(1, 3, 2.0);
-        Matrix matrix_b(1, 3, 4.0);
+        std::vector<std::vector<double>> a{{1.0, 1.2, 0.5}};
+        std::vector<std::vector<double>> b{{1.5, 2.0, 0.8}};
+        Matrix matrix_a(a);
+        Matrix matrix_b(b);
         Matrix matrix_c = matrix_a.crossProduct(matrix_b);
         matrix_c.print();
     }
