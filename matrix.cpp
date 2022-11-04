@@ -50,7 +50,7 @@ public:
     {
         if (num_cols_ != other.num_rows_)
         {
-            throw std::invalid_argument("Number of columns in left matrix do not equal number of rows in right matrix.");
+            throw std::invalid_argument("Left matrix must be of dimensions A x N, and right matrix must be of dimensions N x B.");
         }
 
         Matrix product(num_rows_, other.num_cols_, 0);
@@ -85,16 +85,42 @@ public:
         return product;
     }
 
+    // Dot product.
     double dotProduct(Matrix& other)
     {
+        if (num_rows_ != 1 || other.num_cols_ != 1 || num_cols_ != other.num_rows_)
+        {
+            throw std::invalid_argument("Left matrix must be vector of dimensions 1 x N, and right matrix must be vector of dimensions N x 1.");
+        }
 
+        double dot_product{0};
+
+        for (int i = 0; i < num_cols_; i++)
+        {
+            dot_product += (*matrix_)[0][i] * (*other.matrix_)[i][0];
+        }
+
+        return dot_product;
     }
 
+    // Cross product.
     Matrix crossProduct(Matrix& other)
     {
+        if (num_rows_ != 1 || num_cols_ != 3 || other.num_rows_ != 1 || other.num_cols_ != 3)
+        {
+            throw std::invalid_argument("Matrices must be vectors of dimensions 1 x 3.");
+        }
 
+        Matrix cross_product(num_rows_, num_cols_, 0);
+
+        (*cross_product.matrix_)[0][1] = (*matrix_)[0][1] * (*other.matrix_)[0][2] - (*matrix_)[0][2] * (*other.matrix_)[0][1];
+        (*cross_product.matrix_)[0][2] = (*matrix_)[0][2] * (*other.matrix_)[0][0] - (*matrix_)[0][0] * (*other.matrix_)[0][2];
+        (*cross_product.matrix_)[0][3] = (*matrix_)[0][0] * (*other.matrix_)[0][1] - (*matrix_)[0][1] * (*other.matrix_)[0][0];
+
+        return cross_product;
     }
 
+    // Print matrix.
     void print() const
     {
         std::cout << "Printing matrix: \n";
@@ -118,24 +144,43 @@ private:
 
 int main(int argc, char* argv[])
 {
-    Matrix matrix_a(3, 2, 2.0);
-    matrix_a.print();
+    {
+        Matrix matrix_a;
+        matrix_a.print();
 
-    Matrix matrix_b(matrix_a);
-    matrix_b.print();
+        Matrix matrix_b(3, 2, 2.0);
+        matrix_b.print();
 
-    Matrix matrix_c;
-    matrix_c.print();
-    matrix_c = matrix_a;
-    matrix_c.print();
+        Matrix matrix_c(matrix_b);
+        matrix_c.print();
 
-    std::vector<std::vector<double>> matrix{{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}};
-    Matrix matrix_d(matrix);
-    Matrix matrix_e = matrix_a * matrix_d;
-    matrix_e.print();
+        matrix_a = matrix_c;
+        matrix_a.print();
 
-    Matrix matrix_f = matrix_e * 5;
-    matrix_f.print();
+        std::vector<std::vector<double>> matrix{{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}};
+        Matrix matrix_d(matrix);
+        matrix_d.print();
+
+        Matrix matrix_e = matrix_b * matrix_d;
+        matrix_e.print();
+
+        Matrix matrix_f = matrix_e * 5;
+        matrix_f.print();
+    }
+
+    {
+        Matrix matrix_a(1, 6, 2.0);
+        Matrix matrix_b(6, 1, 2.5);
+        const double dot_product = matrix_a.dotProduct(matrix_b);
+        std::cout << dot_product << "\n";
+    }
+
+    {
+        Matrix matrix_a(1, 3, 2.0);
+        Matrix matrix_b(1, 3, 4.0);
+        Matrix matrix_c = matrix_a.crossProduct(matrix_b);
+        matrix_c.print();
+    }
 
     return 0;
 }
