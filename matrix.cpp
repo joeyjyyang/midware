@@ -136,6 +136,17 @@ public:
         }
     }
 
+    // Utility method.
+    void setValue(const size_t row, const size_t col, const double value)
+    {
+        if (row < 0 || row >= num_rows_ || col < 0 || col >= num_cols_)
+        {
+            throw std::invalid_argument("Invalid row or column index.");
+        }
+
+        (*matrix_)[row][col] == value;
+    }
+
 private:
     size_t num_rows_;
     size_t num_cols_;
