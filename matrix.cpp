@@ -10,15 +10,32 @@ public:
     // Alias for convenience.
     using Matrix_t = std::vector<std::vector<T>>;
 
-    // Default constructor with no parameters.
-    Matrix() : num_rows_(0), num_cols_(0), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<T>(num_cols_, 0)))
-    {}
+    // Deleted default (empty) constructor;
+    Matrix() = delete;
 
-    // Default constructor with desired dimensions and same initial value parameters.
+    // Default constructor.
     Matrix(const size_t num_rows, const size_t num_cols, const T initial_value) : num_rows_(num_rows), num_cols_(num_cols), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<T>(num_cols_, initial_value))) {}
 
-    // Default constructor with desired dimensions and initial value parameters.
+    // Default constructor.
     Matrix(const Matrix_t& matrix) : num_rows_(matrix.size()), num_cols_(matrix[0].size()), matrix_(std::make_unique<Matrix_t>(matrix)) {}
+
+    // Default constructor.
+    Matrix(const std::initializer_list<std::initializer_list<T>> matrix) : num_rows_(matrix.size()), num_cols_(matrix.begin()->size()), matrix_(std::make_unique<Matrix_t>(num_rows_, std::vector<T>(num_cols_, 0)))
+    {
+        size_t i = 0;
+        size_t j = 0;
+
+        for (auto it_i = matrix.begin(); it_i < matrix.end(); it_i++)
+        {
+            for (auto it_j = it_i->begin(); it_j < it_i->end(); it_j++)
+            {
+                (*matrix_)[i][j] = *it_j;
+                j++;
+            }
+            i++;
+            j = 0;
+        }
+    }
 
     // Copy constructor
     Matrix(const Matrix& other) : num_rows_(other.num_rows_), num_cols_(other.num_cols_), matrix_(std::make_unique<Matrix_t>(*other.matrix_))
@@ -157,7 +174,7 @@ private:
 int main(int argc, char* argv[])
 {
     {
-        Matrix<double> matrix_a;
+        Matrix<double> matrix_a(3, 2, 2.0);
         matrix_a.print();
 
         Matrix<double> matrix_b(3, 2, 2.0);
@@ -169,8 +186,7 @@ int main(int argc, char* argv[])
         matrix_a = matrix_c;
         matrix_a.print();
 
-        std::vector<std::vector<double>> d{{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}};
-        Matrix<double> matrix_d(d);
+        Matrix<double> matrix_d({{1.0, 3.0, 1.0, 2.0}, {2.0, 2.0, 1.5, 1.0}});
         matrix_d.print();
 
         Matrix<double> matrix_e = matrix_b * matrix_d;
@@ -181,19 +197,20 @@ int main(int argc, char* argv[])
     }
 
     {
-        std::vector<std::vector<double>> a{{1.0, 1.2, 0.5, 0.2, -0.4}};
-        std::vector<std::vector<double>> b{{1.5}, {2.0}, {0.8}, {0.1}, {-0.5}};
-        Matrix<double> matrix_a(a);
-        Matrix<double> matrix_b(b);
+        Matrix<double> matrix_a{{1.0, 1.2, 0.5, 0.2, -0.4}};
+        matrix_a.print();
+    }
+
+    {
+        Matrix<double> matrix_a({{1.0, 1.2, 0.5, 0.2, -0.4}});
+        Matrix<double> matrix_b({{1.5}, {2.0}, {0.8}, {0.1}, {-0.5}});
         const double dot_product = matrix_a.dotProduct(matrix_b);
         std::cout << dot_product << "\n";
     }
 
     {
-        std::vector<std::vector<double>> a{{1.0, 1.2, 0.5}};
-        std::vector<std::vector<double>> b{{1.5, 2.0, 0.8}};
-        Matrix<double> matrix_a(a);
-        Matrix<double> matrix_b(b);
+        Matrix<double> matrix_a({{1.0, 1.2, 0.5}});
+        Matrix<double> matrix_b({{1.5, 2.0, 0.8}});
         Matrix<double> matrix_c = matrix_a.crossProduct(matrix_b);
         matrix_c.print();
     }
