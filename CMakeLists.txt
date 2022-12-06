@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(cppzmq)
 
+add_executable(smart_pointers smart_pointers.cpp)
+add_executable(distributed_system distributed_system.cpp)
 add_executable(csv_parser csv_parser.cpp)
 add_executable(circular_buffer circular_buffer.cpp)
 add_executable(matrix matrix.cpp)
@@ -15,6 +17,8 @@ add_executable(subscriber_node subscriber_node.cpp)
 add_executable(server_node server_node.cpp)
 add_executable(client_node client_node.cpp)
 
+target_link_libraries(smart_pointers)
+target_link_libraries(distributed_system)
 target_link_libraries(csv_parser)
 target_link_libraries(circular_buffer)
 target_link_libraries(matrix)
