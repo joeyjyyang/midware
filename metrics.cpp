@@ -7,6 +7,12 @@ struct Metrics {
   double score_;
 };
 
+// Lambda capture []:
+// - value [x]
+// - reference [&x]
+// - any variable currently in scope by reference [&]
+// - same as 3, but by value [=]
+// - You can mix any of the above in a comma separated list [x, &y].
 auto metrics_score_max_cmp = [](const Metrics& a, const Metrics& b) {
     return a.score_ < b.score_; 
     // "less" means b is 'greater', so top() will have highest score
