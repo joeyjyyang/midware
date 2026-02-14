@@ -98,7 +98,7 @@ private:
 
             // Clean up cancelled tasks from top of queue.
             while (!tasks_min_heap_.empty()) {
-                const auto& next_task = tasks_min_heap_.next_task();
+                const auto& next_task = tasks_min_heap_.top();
 
                 if (task_running_[next_task.id]) {
                     break;
@@ -115,7 +115,7 @@ private:
                 continue;
             }
 
-            auto next_task = tasks_min_heap_.next_task();
+            auto next_task = tasks_min_heap_.top();
             auto now = std::chrono::steady_clock::now();
 
             // Task ready to execute.
@@ -137,7 +137,8 @@ private:
 
                     // Re-schedule task if still active
                     if (task_info_.find(next_task.id) != task_info_.end() && task_running_[next_task.id]) {
-                        tasks_min_heap_.push({next_task.id, std::chrono::steady_clock::now() + period_copy});
+                        auto next_exec_time = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(period_copy);
+                        tasks_min_heap_.push(QueueEntry{next_task.id, next_exec_time});
                     }
                 }
             }
