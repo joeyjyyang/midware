@@ -38,18 +38,10 @@ public:
         std::cout << "Copy assignment operator.\n";
 
         if (this != &other) {
-            // Method 1: Copy-and-swap idiom, which provides strong exception safety guarantee, but involves an extra copy of the data.
+            // Copy-and-swap idiom, which provides strong exception safety guarantee, but involves an extra copy of the data.
             Buffer temp(other);
             std::swap(data_, temp.data_);
             std::swap(size_, temp.size_);
-
-            // Method 2: Direct copy assignment.
-            // Allocate new memory first for exception safety.
-            // int* new_data = new int[other.size_];
-            // std::copy(other.data_, other.data_ + other.size_, new_data);
-            // delete[] data_;
-            // data_ = new_data;
-            // size_ = other.size_;
         }
 
         return *this;
@@ -65,19 +57,14 @@ public:
     // Good practice: Marking this noexcept enables optimal move semantics and prevents fallback to copy operations in standard containers.
     Buffer& operator=(Buffer&& other) noexcept {
         std::cout << "Move assignment operator.\n";
+
         if (this != &other) {
-            // Method 1: Move-and-swap idiom, which provides strong exception safety guarantee, but involves an extra move of the data.
+            // Move-and-swap idiom, which provides strong exception safety guarantee, but involves an extra move of the data.
             Buffer temp(std::move(other));
             std::swap(data_, temp.data_);
             std::swap(size_, temp.size_);
-
-            // Method 2: Direct move assignment.
-            // delete[] data_;
-            // data_ = nullptr;
-            // size_ = 0;
-            // std::swap(data_, other.data_);
-            // std::swap(size_, other.size_);
         }
+
         return *this;
     }
 };
