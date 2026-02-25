@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <iostream>
 
@@ -70,6 +71,8 @@ public:
 };
 
 int main() {
+    auto start = std::chrono::high_resolution_clock::now();
+
     // Constructor.
     Buffer buf1(5);
     // i is size_t, so i * 10 promotos to size_t; therefore, need to static_cast to int to avoid narrowing conversion warning.
@@ -91,6 +94,9 @@ int main() {
     Buffer buf5(buf3.size());
     // Move assignment operator.
     buf5 = std::move(buf3);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Elapsed time: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds\n";
 
     return 0;
 }
