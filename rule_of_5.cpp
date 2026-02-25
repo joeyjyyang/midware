@@ -79,8 +79,7 @@ int main() {
     for (size_t i = 0; i < buf1.size(); ++i) buf1.data()[i] = static_cast<int>(i * 10);
 
     // Copy constructor.
-    // Can also do Buffer buf2(buf1); but using copy initialization syntax to demonstrate that it also works.
-    Buffer buf2 = buf1;
+    Buffer buf2(buf1);
 
     // Constructor.
     Buffer buf4(buf2.size());
@@ -88,7 +87,7 @@ int main() {
     buf4 = buf2;
 
     // Move constructor.
-    Buffer buf3 = std::move(buf1);
+    Buffer buf3(std::move(buf1));
 
     // Constructor.
     Buffer buf5(buf3.size());
