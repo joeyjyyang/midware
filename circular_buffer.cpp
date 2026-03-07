@@ -38,6 +38,7 @@ public:
 
         T item = buffer_[reader_tail_];
         ++reader_tail_;
+        // Using modulo operator to wrap around the reader tail index when it reaches the end of the buffer, ensuring circular behavior.
         reader_tail_ %= buffer_size_;
         assert(reader_tail_ < buffer_size_);
 
@@ -61,6 +62,7 @@ public:
 
         buffer_[writer_head_] = item;
         ++writer_head_;
+        // Using modulo operator to wrap around the writer head index when it reaches the end of the buffer, ensuring circular behavior.
         writer_head_ %= buffer_size_;
         assert(writer_head_ < buffer_size_);
 
