@@ -56,7 +56,7 @@ public:
         while (true) {
             auto start = std::chrono::high_resolution_clock::now();
 
-            std::cout << "Executing LidarNode with driver UUID: " << driver_->getUUID() << std::endl;
+            driver_->read();
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
             auto end = std::chrono::high_resolution_clock::now();
@@ -74,15 +74,7 @@ public:
     explicit LidarDriver(const uint32_t uuid) : uuid_(uuid) {}
 
     void read() final override {
-        while (true) {
-            auto start = std::chrono::high_resolution_clock::now();
-
-            std::cout << "Executing LidarDriver with UUID: " << uuid_ << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-
-            auto end = std::chrono::high_resolution_clock::now();
-            std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds" << std::endl;
-        }
+        std::cout << "Reading data from LidarDriver with UUID: " << uuid_ << std::endl;
     }
 
     uint32_t getUUID() const final override {
