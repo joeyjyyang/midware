@@ -12,6 +12,7 @@
 
 */
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -51,7 +52,9 @@ private:
 class LidarNode : public IRuntimeNode {
 public:
     // Mark single argument constructors as explicit to prevent unintended implicit conversions.
-    explicit LidarNode(std::unique_ptr<IDriver>&& driver) : driver_(std::move(driver)) {}
+    explicit LidarNode(std::unique_ptr<IDriver>&& driver) : driver_(std::move(driver)) {
+        running_.store(true);
+    }
 
     // Technically, unnecessary since compiler will generate this.
     ~LidarNode() override = default;
@@ -78,8 +81,12 @@ public:
         return *this;
     }
 
-    void execute() final override {
-        while (true) {
+    void stop() {
+        running_.store(false);
+    }
+
+    void execute() final {
+        while (running_.load()) {
             auto start = std::chrono::high_resolution_clock::now();
 
             driver_->read();
@@ -92,6 +99,7 @@ public:
 
 private:
     std::unique_ptr<IDriver> driver_;
+    std::atomic<bool> running_{false};
 };
 
 class LidarDriver : public IDriver {
@@ -118,11 +126,11 @@ public:
     // Technically, unnecessary since compiler will generate this.
     LidarDriver& operator=(LidarDriver&&) noexcept = default;
 
-    void read() final override {
+    void read() final {
         std::cout << "Reading data from LidarDriver with UUID: " << uuid_ << "\n";
     }
 
-    uint32_t getUUID() const final override {
+    uint32_t getUUID() const final {
         return uuid_;
     }
 
