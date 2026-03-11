@@ -50,7 +50,33 @@ private:
 
 class LidarNode : public IRuntimeNode {
 public:
-    LidarNode(std::unique_ptr<IDriver> driver) : driver_(std::move(driver)) {}
+    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
+    explicit LidarNode(std::unique_ptr<IDriver>&& driver) : driver_(std::move(driver)) {}
+
+    // Technically, unnecessary since compiler will generate this.
+    ~LidarNode() override = default;
+
+    // Copy Constructor.
+    // Technically, unnecessary since compiler will generate this.
+    LidarNode(const LidarNode&) = delete;
+
+    // Copy Assignment Operator.
+    // Technically, unnecessary since compiler will generate this.
+    LidarNode& operator=(const LidarNode&) = delete;
+
+    // Move Constructor.
+    // Technically, unnecessary since compiler will generate this.
+    LidarNode(LidarNode&& other) noexcept : driver_(std::move(other.driver_)) {}
+
+    // Move Assignment Operator.
+    // Technically, unnecessary since compiler will generate this.
+    LidarNode& operator=(LidarNode&& other) noexcept {
+        if (this != &other) {
+            driver_ = std::move(other.driver_);
+        }
+
+        return *this;
+    }
 
     void execute() final override {
         while (true) {
@@ -60,7 +86,7 @@ public:
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
             auto end = std::chrono::high_resolution_clock::now();
-            std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds" << std::endl;
+            std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds\n";
         }
     }
 
@@ -73,8 +99,27 @@ public:
     // Mark single argument constructors as explicit to prevent unintended implicit conversions.
     explicit LidarDriver(const uint32_t uuid) : uuid_(uuid) {}
 
+    // Technically, unnecessary since compiler will generate this.
+    ~LidarDriver() override = default;
+
+    // Copy Constructor.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver(const LidarDriver&) = default;
+
+    // Copy Assignment Operator.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver& operator=(const LidarDriver&) = default;
+
+    // Move Constructor.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver(LidarDriver&&) noexcept = default;
+
+    // Move Assignment Operator.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver& operator=(LidarDriver&&) noexcept = default;
+
     void read() final override {
-        std::cout << "Reading data from LidarDriver with UUID: " << uuid_ << std::endl;
+        std::cout << "Reading data from LidarDriver with UUID: " << uuid_ << "\n";
     }
 
     uint32_t getUUID() const final override {
@@ -92,6 +137,8 @@ class RuntimeGraph {
 int main (int argc, char* argv[]) {
     std::unique_ptr<IDriver> driver = std::make_unique<LidarDriver>(12345);
     std::unique_ptr<IRuntimeNode> node = std::make_unique<LidarNode>(std::move(driver));
+    // driver is nullptr after move, so cannot be used directly hereafter.
+
     node->execute();
 
     return 0;
