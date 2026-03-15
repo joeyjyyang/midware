@@ -73,10 +73,12 @@ public:
 
     // Move Constructor.
     // Technically, unnecessary since compiler will generate this.
+    // LidarNode(LidarNode&&) noexcept = default;
     LidarNode(LidarNode&& other) noexcept : driver_(std::move(other.driver_)) {}
 
     // Move Assignment Operator.
     // Technically, unnecessary since compiler will generate this.
+    // LidarNode& operator=(LidarNode&&) noexcept = default;
     LidarNode& operator=(LidarNode&& other) noexcept {
         if (this != &other) {
             driver_ = std::move(other.driver_);
@@ -155,6 +157,8 @@ public:
                     {
                         std::unique_lock<std::mutex> lock(mtx_);
 
+                        // If no tasks, release the lock and wait until a task is added to the queue. The lambda predicate ensures that spurious wakeups don't cause the thread to proceed without a task.
+                        // If tasks, acquire the lock, pop a task from the queue, and execute it. This allows multiple threads to efficiently wait for and process tasks without busy-waiting.
                         cv_.wait(lock, [this]() {
                             return !task_queue_.empty();
                         });
@@ -171,7 +175,14 @@ public:
     }
 
     ~RuntimeGraph() {
-        return;
+        running_.store(false);
+        cv_.notify_all();
+
+        for (auto& thread : thread_pool_) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
     }
 
     void registerNode(std::unique_ptr<IRuntimeNode>&& node) {
@@ -234,8 +245,9 @@ int main (int argc, char* argv[]) {
     std::unique_ptr<IDriver> lidar_driver = std::make_unique<LidarDriver>(12345);
     std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>(std::move(lidar_driver), 10.0);
     // lidar_driver is nullptr after move, so cannot be used directly hereafter.
-    runtime_graph.registerNode(std::move(lidar_node));
-    // lidar_node is nullptr after move, so cannot be used directly hereafter.
+    //runtime_graph.registerNode(std::move(lidar_node));
+    // lidar_node is nullptr after move, so cannot be used directly hereafter.run(
+    //runtime_graph.run();
 
     return 0;
 }
