@@ -64,8 +64,10 @@ private:
 };
 
 void test_lidar_node_calls_driver_read() {
-    auto mock_driver = std::make_unique<MockDriver>();
-    MockDriver* mock_ptr = mock_driver.get(); // retain raw ptr before move
+    // Dependency injection of a mock driver into LidarNode.
+    std::unique_ptr<IDriver> mock_driver = std::make_unique<MockDriver>();
+    // Idiomatically, we want to keep ownership of the mock driver in the test function to verify its state after the node executes, so we capture a raw pointer to it before moving it into the node.
+    MockDriver* mock_ptr = static_cast<MockDriver*>(mock_driver.get());
 
     LidarNode node("test_node", std::move(mock_driver), 10.0);
     node.execute();
@@ -76,7 +78,7 @@ void test_lidar_node_calls_driver_read() {
 
 void test_register_null_node_returns_error() {
     RuntimeGraph graph(1);
-    auto error = graph.registerNode(nullptr);
+    std::optional<std::string> error = graph.registerNode(nullptr);
 
     assert(error.has_value());
     assert(error->find("null") != std::string::npos);
@@ -85,11 +87,11 @@ void test_register_null_node_returns_error() {
 
 void test_register_duplicate_node_returns_error() {
     RuntimeGraph graph(1);
-    auto mock_1 = std::make_unique<MockNode>("node_1", 10.0);
-    auto mock_2 = std::make_unique<MockNode>("node_1", 10.0); // same name
+    std::unique_ptr<IRuntimeNode> mock_1 = std::make_unique<MockNode>("node_1", 10.0);
+    std::unique_ptr<IRuntimeNode> mock_2 = std::make_unique<MockNode>("node_1", 10.0);
 
     graph.registerNode(std::move(mock_1));
-    auto error = graph.registerNode(std::move(mock_2));
+    std::optional<std::string> error = graph.registerNode(std::move(mock_2));
 
     assert(error.has_value());
     assert(error->find("duplicate") != std::string::npos);
@@ -100,7 +102,7 @@ void test_dispatch_task_after_stop_returns_error() {
     RuntimeGraph graph(1);
     graph.stop();
 
-    auto error = graph.dispatchTask([]() {});
+    std::optional<std::string> error = graph.dispatchTask([]() {});
     assert(error.has_value());
     std::cout << "PASS: test_dispatch_task_after_stop_returns_error\n";
 }

@@ -14,14 +14,14 @@ int main (int argc, char* argv[]) {
     // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    auto error_1 = runtime_graph.registerNode(std::move(lidar_node_1));
+    std::optional<std::string> error_1 = runtime_graph.registerNode(std::move(lidar_node_1));
 
     if (error_1) {
         std::cerr << "Error registering node: " << *error_1 << "\n";
     }
 
     // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
-    auto error_2 = runtime_graph.registerNode(std::move(lidar_node_2));
+    std::optional<std::string> error_2 = runtime_graph.registerNode(std::move(lidar_node_2));
 
     if (error_2) {
         std::cerr << "Error registering node: " << *error_2 << "\n";
