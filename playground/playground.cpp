@@ -69,7 +69,7 @@ public:
     void read() final {
         auto start = std::chrono::high_resolution_clock::now();
 
-        //std::this_thread::sleep_for(std::chrono::seconds(1));
+        // TODO: Add work here.
 
         auto end = std::chrono::high_resolution_clock::now();
         std::cout << "LidarDriver " << uuid_ << " read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
@@ -139,7 +139,7 @@ public:
     void publish() final {
         auto start = std::chrono::high_resolution_clock::now();
 
-        //std::this_thread::sleep_for(std::chrono::seconds(1));
+        // TODO: Add work here.
 
         auto end = std::chrono::high_resolution_clock::now();
         std::cout << "LidarNode " << name_ << " publish() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
@@ -216,7 +216,11 @@ public:
     ~RuntimeGraph() {
         std::cout << "RuntimeGraph destructor called.\n";
 
-        running_.store(false);
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            running_.store(false);
+        }
+
         cv_.notify_all();
 
         for (auto& thread : thread_pool_) {
@@ -229,7 +233,11 @@ public:
     }
 
     void stop() {
-        running_.store(false);
+        {
+            std::lock_guard<std::mutex> lock(mtx_);
+            running_.store(false);
+        }
+
         cv_.notify_all();
     }
 
@@ -250,37 +258,42 @@ public:
 
     void run() {
         for (const auto& node : nodes_) {
-            dispatchTask([&node, this]() {
+            // Avoid dangling dereference to std::unique_ptr by capturing a raw pointer to the node in the lambda.
+            IRuntimeNode* node_ptr = node.get();
+
+            dispatchTask([node_ptr, this]() {
                 while(running_.load()) {
                     auto start = std::chrono::high_resolution_clock::now();
 
-                    node->execute();
-                    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.0 / node->getFrequency())));
+                    auto next = std::chrono::steady_clock::now() + std::chrono::milliseconds(static_cast<int>(1000.0 / node_ptr->getFrequency()));
+                    node_ptr->execute();
+                    // Use sleep_until() instead of sleep_for() to avoid accumulating drift over time. This ensures that the node executes at consistent intervals based on its specified frequency, even if individual executions take varying amounts of time.
+                    std::this_thread::sleep_until(next);
 
                     auto end = std::chrono::high_resolution_clock::now();
-                    std::cout << "RuntimeGraph dispatchTask() for " << node->getName() << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
+                    std::cout << "RuntimeGraph dispatchTask() for " << node_ptr->getName() << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
                 }
 
-                std::cout << "Exiting task loop for node: " << node->getName() << "\n";
+                std::cout << "Exiting task loop for node: " << node_ptr->getName() << "\n";
             });
         }
     }
 
     // // Copy Constructor.
     // // Technically, unnecessary since compiler will generate this.
-    // RuntimeGraph(const RuntimeGraph&) = default;
+    RuntimeGraph(const RuntimeGraph&) = delete;
 
     // // Copy Assignment Operator.
     // // Technically, unnecessary since compiler will generate this.
-    // RuntimeGraph& operator=(const RuntimeGraph&) = default;
+    RuntimeGraph& operator=(const RuntimeGraph&) = delete;
 
     // // Move Constructor.
     // // Technically, unnecessary since compiler will generate this.
-    // RuntimeGraph(RuntimeGraph&&) noexcept = default;
+    RuntimeGraph(RuntimeGraph&&) noexcept = delete;
 
     // // Move Assignment Operator.
     // // Technically, unnecessary since compiler will generate this.
-    // RuntimeGraph& operator=(RuntimeGraph&&) noexcept = default;
+    RuntimeGraph& operator=(RuntimeGraph&&) noexcept = delete;
 
 private:
     unsigned int num_threads_;
@@ -293,14 +306,19 @@ private:
 };
 
 int main (int argc, char* argv[]) {
-    std::unique_ptr<IDriver> lidar_driver = std::make_unique<LidarDriver>(1000);
+    std::unique_ptr<IDriver> lidar_driver_1 = std::make_unique<LidarDriver>(1000);
+    std::unique_ptr<IDriver> lidar_driver_2 = std::make_unique<LidarDriver>(1111);
 
-    std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>("lidar_node_1", std::move(lidar_driver), 10.0);
-    // lidar_driver is nullptr after move, so cannot be used directly hereafter.
+    std::unique_ptr<IRuntimeNode> lidar_node_1 = std::make_unique<LidarNode>("lidar_node_1", std::move(lidar_driver_1), 10.0);
+    // lidar_driver_1 is nullptr after move, so cannot be used directly hereafter.
+    std::unique_ptr<IRuntimeNode> lidar_node_2 = std::make_unique<LidarNode>("lidar_node_2", std::move(lidar_driver_2), 20.0);
+    // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    runtime_graph.registerNode(std::move(lidar_node));
-    // lidar_node is nullptr after move, so cannot be used directly hereafter.
+    runtime_graph.registerNode(std::move(lidar_node_1));
+    // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
+    runtime_graph.registerNode(std::move(lidar_node_2));
+    // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
     runtime_graph.run();
 
     // Wait for user input to prevent the program from exiting immediately.
