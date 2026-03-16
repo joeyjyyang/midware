@@ -1,18 +1,3 @@
-/*
-
-- String parsing
-- Lambdas/functors
-- Smart pointers
-- Move semantics
-- Variadic templates
-- Testing and dependency injection
-- Performance profiling and optimization
-- C++20 features (concepts, ranges, coroutines)
-- C++17 features (structured bindings, if constexpr, fold expressions)
-- std::optional
-
-*/
-
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -21,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <string>
 #include <thread>
@@ -241,19 +227,40 @@ public:
         cv_.notify_all();
     }
 
-    void registerNode(std::unique_ptr<IRuntimeNode>&& node) {
-        std::cout << "Registering node: " << node->getName() << " with frequency: " << node->getFrequency() << " Hz\n";
+    std::optional<std::string> registerNode(std::unique_ptr<IRuntimeNode>&& new_node) {
+        if (!new_node) {
+            return "Cannot register null node.";
+        }
 
-        nodes_.emplace_back(std::move(node));
+        for (const auto& node : nodes_) {
+            if (node->getName() == new_node->getName()) {
+                return "Cannot register node: duplicate name '" + new_node->getName() + "'.";
+            }
+        }
+
+        std::cout << "Registering node: " << new_node->getName() << " with frequency: " << new_node->getFrequency() << " Hz\n";
+
+        nodes_.emplace_back(std::move(new_node));
+
+        return std::nullopt;
     }
 
-    void dispatchTask(std::function<void()>&& task) {
+    std::optional<std::string> dispatchTask(std::function<void()>&& task) {
         {
             std::lock_guard<std::mutex> lock(mtx_);
+
+            if (!running_.load()) {
+                std::cout << "RuntimeGraph is not running. Cannot dispatch task.\n";
+
+                return "RuntimeGraph is not running. Cannot dispatch task.";
+            }
+
             task_queue_.emplace(std::move(task));
         }
 
         cv_.notify_one();
+
+        return std::nullopt;
     }
 
     void run() {
@@ -261,7 +268,7 @@ public:
             // Avoid dangling dereference to std::unique_ptr by capturing a raw pointer to the node in the lambda.
             IRuntimeNode* node_ptr = node.get();
 
-            dispatchTask([node_ptr, this]() {
+            auto error = dispatchTask([node_ptr, this]() {
                 while(running_.load()) {
                     auto start = std::chrono::high_resolution_clock::now();
 
@@ -276,6 +283,10 @@ public:
 
                 std::cout << "Exiting task loop for node: " << node_ptr->getName() << "\n";
             });
+
+            if (error) {
+                std::cerr << "Error dispatching task for node " << node_ptr->getName() << ": " << *error << "\n";
+            }
         }
     }
 
@@ -315,9 +326,19 @@ int main (int argc, char* argv[]) {
     // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    runtime_graph.registerNode(std::move(lidar_node_1));
+    auto error = runtime_graph.registerNode(std::move(lidar_node_1));
+
+    if (error) {
+        std::cerr << "Error registering node: " << *error << "\n";
+    }
+
     // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
-    runtime_graph.registerNode(std::move(lidar_node_2));
+    error = runtime_graph.registerNode(std::move(lidar_node_2));
+
+    if (error) {
+        std::cerr << "Error registering node: " << *error << "\n";
+    }
+
     // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
     runtime_graph.run();
 
