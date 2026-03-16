@@ -26,22 +26,6 @@
 #include <thread>
 #include <vector>
 
-class IRuntimeNode {
-public:
-    // Virtual destructor is essential for proper cleanup of derived classes when deleted through a base class pointer.
-    virtual ~IRuntimeNode() = default;
-
-    // Pure virtual function(s) below.
-
-    virtual void publish() = 0;
-    virtual void execute() = 0;
-    virtual double getFrequency() const = 0;
-
-private:
-    // Technically, can have static members in interfaces, but considered bad design as interfaces define behavior not state.
-    // Static members introduce implementation details and hidden dependencies.
-};
-
 class IDriver {
 public:
     // Virtual destructor is essential for proper cleanup of derived classes when deleted through a base class pointer.
@@ -50,7 +34,67 @@ public:
     // Pure virtual function(s) below.
 
     virtual void read() = 0;
+
     virtual uint32_t getUuid() const = 0;
+
+private:
+    // Technically, can have static members in interfaces, but considered bad design as interfaces define behavior not state.
+    // Static members introduce implementation details and hidden dependencies.
+};
+
+class LidarDriver : public IDriver {
+public:
+    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
+    explicit LidarDriver(const uint32_t uuid) : uuid_(uuid) {}
+
+    // Technically, unnecessary since compiler will generate this.
+    ~LidarDriver() override = default;
+
+    // Copy Constructor.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver(const LidarDriver&) = default;
+
+    // Copy Assignment Operator.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver& operator=(const LidarDriver&) = default;
+
+    // Move Constructor.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver(LidarDriver&&) noexcept = default;
+
+    // Move Assignment Operator.
+    // Technically, unnecessary since compiler will generate this.
+    LidarDriver& operator=(LidarDriver&&) noexcept = default;
+
+    void read() final {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::cout << "LidarDriver read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
+    }
+
+    uint32_t getUuid() const final {
+        return uuid_;
+    }
+
+private:
+    uint32_t uuid_;
+};
+
+class IRuntimeNode {
+public:
+    // Virtual destructor is essential for proper cleanup of derived classes when deleted through a base class pointer.
+    virtual ~IRuntimeNode() = default;
+
+    // Pure virtual function(s) below.
+
+    virtual void publish() = 0;
+
+    virtual void execute() = 0;
+
+    virtual double getFrequency() const = 0;
 
 private:
     // Technically, can have static members in interfaces, but considered bad design as interfaces define behavior not state.
@@ -89,7 +133,12 @@ public:
     }
 
     void publish() final {
-        std::cout << "Publishing data from LidarNode with frequency: " << frequency_ << " Hz\n";
+        auto start = std::chrono::high_resolution_clock::now();
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::cout << "LidarNode publish() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
     }
 
     void execute() final {
@@ -97,10 +146,9 @@ public:
 
         driver_->read();
         publish();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
 
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarNode execute() took " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds\n";
+        std::cout << "LidarNode execute() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
     }
 
     double getFrequency() const final {
@@ -112,51 +160,19 @@ private:
     std::unique_ptr<IDriver> driver_;
 };
 
-class LidarDriver : public IDriver {
-public:
-    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
-    explicit LidarDriver(const uint32_t uuid) : uuid_(uuid) {}
-
-    // Technically, unnecessary since compiler will generate this.
-    ~LidarDriver() override = default;
-
-    // Copy Constructor.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver(const LidarDriver&) = default;
-
-    // Copy Assignment Operator.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver& operator=(const LidarDriver&) = default;
-
-    // Move Constructor.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver(LidarDriver&&) noexcept = default;
-
-    // Move Assignment Operator.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver& operator=(LidarDriver&&) noexcept = default;
-
-    void read() final {
-        std::cout << "Reading data from LidarDriver with UUID: " << uuid_ << "\n";
-    }
-
-    uint32_t getUuid() const final {
-        return uuid_;
-    }
-
-private:
-    uint32_t uuid_;
-};
-
 class RuntimeGraph {
 public:
     // Mark single argument constructors as explicit to prevent unintended implicit conversions.
     explicit RuntimeGraph(const unsigned int num_threads) : num_threads_(num_threads) {
+        std::cout << "RuntimeGraph constructed called with " << num_threads_ << " threads.\n";
+
         running_.store(true);
 
         for (unsigned int i = 0; i < num_threads_; ++i) {
             // More efficient than thread_pool_.emplace_back(std::thread([this]() { ... })) since it constructs the thread in place after forwarding the lambda to the thread constructor, avoiding an extra move/copy of the thread object.
             thread_pool_.emplace_back([this]() {
+                std::cout << "Thread " << std::this_thread::get_id() << " started.\n";
+
                 while (true) {
                     std::function<void()> task;
 
@@ -164,27 +180,32 @@ public:
                         std::unique_lock<std::mutex> lock(mtx_);
 
                         // If no tasks, release the lock and wait until a task is added to the queue. The lambda predicate ensures that spurious wakeups don't cause the thread to proceed without a task.
-                        // If tasks, acquire the lock, pop a task from the queue, and execute it. This allows multiple threads to efficiently wait for and process tasks without busy-waiting.
+                        // If tasks, acquire the lock, pop a task from the queue, release the lock, and execute it. This allows multiple threads to efficiently wait for and process tasks without busy-waiting.
                         cv_.wait(lock, [this]() {
-                            return !task_queue_.empty() || running_.load();
+                            // Also wake threads if running_ is false to allow them to exit gracefully.
+                            return !task_queue_.empty() || !running_.load();
                         });
 
-                        if (!running_.load() && task_queue_.empty()) {
+                        // Thread is now awake; check which condition caused the wakeup and handle it appropriately.
+                        if (!task_queue_.empty()) {
+                            task = std::move(task_queue_.front());
+                            task_queue_.pop();
+                            lock.unlock();
+                            // Execute the task outside of the lock to allow other threads to access the queue.
+                            task();
+                        }
+                        else if (!running_.load()) {
                             return;
                         }
-
-                        task = std::move(task_queue_.front());
-                        task_queue_.pop();
                     }
-
-                    // Execute the task outside of the lock to allow other threads to access the queue.
-                    task();
                 }
             });
         }
     }
 
     ~RuntimeGraph() {
+        std::cout << "RuntimeGraph destructor called.\n";
+
         running_.store(false);
         cv_.notify_all();
 
@@ -256,9 +277,11 @@ private:
 };
 
 int main (int argc, char* argv[]) {
-    RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
     std::unique_ptr<IDriver> lidar_driver = std::make_unique<LidarDriver>(12345);
+
     std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>(std::move(lidar_driver), 10.0);
+
+    RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
     // lidar_driver is nullptr after move, so cannot be used directly hereafter.
     //runtime_graph.registerNode(std::move(lidar_node));
     // lidar_node is nullptr after move, so cannot be used directly hereafter.run(
