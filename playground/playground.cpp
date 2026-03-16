@@ -33,6 +33,7 @@ public:
 
     // Pure virtual function(s) below.
 
+    virtual void publish() = 0;
     virtual void execute() = 0;
     virtual double getFrequency() const = 0;
 
@@ -87,14 +88,19 @@ public:
         return *this;
     }
 
+    void publish() final {
+        std::cout << "Publishing data from LidarNode with frequency: " << frequency_ << " Hz\n";
+    }
+
     void execute() final {
         auto start = std::chrono::high_resolution_clock::now();
 
         driver_->read();
+        publish();
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds\n";
+        std::cout << "LidarNode execute() took " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds\n";
     }
 
     double getFrequency() const final {
@@ -160,8 +166,12 @@ public:
                         // If no tasks, release the lock and wait until a task is added to the queue. The lambda predicate ensures that spurious wakeups don't cause the thread to proceed without a task.
                         // If tasks, acquire the lock, pop a task from the queue, and execute it. This allows multiple threads to efficiently wait for and process tasks without busy-waiting.
                         cv_.wait(lock, [this]() {
-                            return !task_queue_.empty();
+                            return !task_queue_.empty() || running_.load();
                         });
+
+                        if (!running_.load() && task_queue_.empty()) {
+                            return;
+                        }
 
                         task = std::move(task_queue_.front());
                         task_queue_.pop();
@@ -185,6 +195,11 @@ public:
         }
     }
 
+    void stop() {
+        running_.store(false);
+        cv_.notify_all();
+    }
+
     void registerNode(std::unique_ptr<IRuntimeNode>&& node) {
         nodes_.emplace_back(std::move(node));
     }
@@ -200,8 +215,8 @@ public:
 
     void run() {
         for (const auto& node : nodes_) {
-            dispatchTask([&node]() {
-                while(true) {
+            dispatchTask([&node, this]() {
+                while(running_.load()) {
                     auto start = std::chrono::high_resolution_clock::now();
 
                     node->execute();
