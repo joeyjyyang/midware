@@ -1,6 +1,8 @@
 // sudo apt-get install libgtest-dev libgmock-dev
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+// #include <gmock/gmock.h>
+// #include <gtest/gtest.h>
+
+#include <cassert>
 
 #include "IDriver.hpp"
 #include "IRuntimeNode.hpp"
@@ -8,34 +10,106 @@
 #include "LidarNode.hpp"
 #include "RuntimeGraph.hpp"
 
-int main (int argc, char* argv[]) {
-    std::unique_ptr<IDriver> lidar_driver_1 = std::make_unique<LidarDriver>(1000);
-    std::unique_ptr<IDriver> lidar_driver_2 = std::make_unique<LidarDriver>(1111);
-
-    std::unique_ptr<IRuntimeNode> lidar_node_1 = std::make_unique<LidarNode>("lidar_node_1", std::move(lidar_driver_1), 10.0);
-    // lidar_driver_1 is nullptr after move, so cannot be used directly hereafter.
-    std::unique_ptr<IRuntimeNode> lidar_node_2 = std::make_unique<LidarNode>("lidar_node_2", std::move(lidar_driver_2), 20.0);
-    // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
-
-    RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    auto error_1 = runtime_graph.registerNode(std::move(lidar_node_1));
-
-    if (error_1) {
-        std::cerr << "Error registering node: " << *error_1 << "\n";
+class MockDriver : public IDriver {
+public:
+    void read() final {
+        read_count_++;
     }
 
-    // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
-    auto error_2 = runtime_graph.registerNode(std::move(lidar_node_2));
-
-    if (error_2) {
-        std::cerr << "Error registering node: " << *error_2 << "\n";
+    uint32_t getUuid() const final {
+        return 0;
     }
 
-    // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
-    runtime_graph.run();
+    int getReadCount() const {
+        return read_count_;
+    }
 
-    // Wait for user input to prevent the program from exiting immediately.
-    std::cin.get();
+private:
+    int read_count_{0};
+};
+
+class MockNode : public IRuntimeNode {
+public:
+    explicit MockNode(const std::string& name, const double frequency) : name_(name), frequency_(frequency) {}
+
+    void publish() final {
+        publish_count_++;
+    }
+
+    void execute() final {
+        execute_count_++;
+    }
+
+    std::string getName() const final {
+        return name_;
+    }
+
+    double getFrequency() const final {
+        return frequency_;
+    }
+
+    int getPublishCount() const {
+        return publish_count_;
+    }
+
+    int getExecuteCount() const {
+        return execute_count_;
+    }
+
+private:
+    std::string name_;
+    double frequency_;
+    int publish_count_{0};
+    int execute_count_{0};
+};
+
+void test_lidar_node_calls_driver_read() {
+    auto mock_driver = std::make_unique<MockDriver>();
+    MockDriver* mock_ptr = mock_driver.get(); // retain raw ptr before move
+
+    LidarNode node("test_node", std::move(mock_driver), 10.0);
+    node.execute();
+
+    assert(mock_ptr->getReadCount() == 1);
+    std::cout << "PASS: test_lidar_node_calls_driver_read\n";
+}
+
+void test_register_null_node_returns_error() {
+    RuntimeGraph graph(1);
+    auto error = graph.registerNode(nullptr);
+
+    assert(error.has_value());
+    assert(error->find("null") != std::string::npos);
+    std::cout << "PASS: test_register_null_node_returns_error\n";
+}
+
+void test_register_duplicate_node_returns_error() {
+    RuntimeGraph graph(1);
+    auto mock_1 = std::make_unique<MockNode>("node_1", 10.0);
+    auto mock_2 = std::make_unique<MockNode>("node_1", 10.0); // same name
+
+    graph.registerNode(std::move(mock_1));
+    auto error = graph.registerNode(std::move(mock_2));
+
+    assert(error.has_value());
+    assert(error->find("duplicate") != std::string::npos);
+    std::cout << "PASS: test_register_duplicate_node_returns_error\n";
+}
+
+void test_dispatch_task_after_stop_returns_error() {
+    RuntimeGraph graph(1);
+    graph.stop();
+
+    auto error = graph.dispatchTask([]() {});
+    assert(error.has_value());
+    std::cout << "PASS: test_dispatch_task_after_stop_returns_error\n";
+}
+
+int main(int argc, char* argv[]) {
+    test_lidar_node_calls_driver_read();
+    test_register_null_node_returns_error();
+    test_register_duplicate_node_returns_error();
+    test_dispatch_task_after_stop_returns_error();
 
     return 0;
 }
