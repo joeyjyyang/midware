@@ -2,6 +2,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "IDriver.hpp"
+#include "IRuntimeNode.hpp"
+#include "LidarDriver.hpp"
+#include "LidarNode.hpp"
+#include "RuntimeGraph.hpp"
+
 int main (int argc, char* argv[]) {
     std::unique_ptr<IDriver> lidar_driver_1 = std::make_unique<LidarDriver>(1000);
     std::unique_ptr<IDriver> lidar_driver_2 = std::make_unique<LidarDriver>(1111);

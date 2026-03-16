@@ -1,7 +1,3 @@
-// sudo apt-get install libgtest-dev libgmock-dev
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
 #include "IDriver.hpp"
 #include "IRuntimeNode.hpp"
 #include "LidarDriver.hpp"
