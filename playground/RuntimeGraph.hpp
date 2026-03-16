@@ -1,7 +1,9 @@
+// Prevent multiple inclusions of the same header file, which can lead to compilation errors due to redefinitions.
+#pragma once
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -12,148 +14,8 @@
 #include <thread>
 #include <vector>
 
-class IDriver {
-public:
-    // Virtual destructor is essential for proper cleanup of derived classes when deleted through a base class pointer.
-    virtual ~IDriver() = default;
-
-    // Pure virtual function(s) below.
-
-    virtual void read() = 0;
-
-    virtual uint32_t getUuid() const = 0;
-
-private:
-    // Technically, can have static members in interfaces, but considered bad design as interfaces define behavior not state.
-    // Static members introduce implementation details and hidden dependencies.
-};
-
-class LidarDriver : public IDriver {
-public:
-    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
-    explicit LidarDriver(const uint32_t uuid) : uuid_(uuid) {}
-
-    // Technically, unnecessary since compiler will generate this.
-    ~LidarDriver() override = default;
-
-    // Copy Constructor.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver(const LidarDriver&) = default;
-
-    // Copy Assignment Operator.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver& operator=(const LidarDriver&) = default;
-
-    // Move Constructor.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver(LidarDriver&&) noexcept = default;
-
-    // Move Assignment Operator.
-    // Technically, unnecessary since compiler will generate this.
-    LidarDriver& operator=(LidarDriver&&) noexcept = default;
-
-    void read() final {
-        auto start = std::chrono::high_resolution_clock::now();
-
-        // TODO: Add work here.
-
-        auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarDriver " << uuid_ << " read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
-    }
-
-    uint32_t getUuid() const final {
-        return uuid_;
-    }
-
-private:
-    uint32_t uuid_;
-};
-
-class IRuntimeNode {
-public:
-    // Virtual destructor is essential for proper cleanup of derived classes when deleted through a base class pointer.
-    virtual ~IRuntimeNode() = default;
-
-    // Pure virtual function(s) below.
-
-    virtual void publish() = 0;
-
-    virtual void execute() = 0;
-
-    virtual std::string getName() const = 0;
-
-    virtual double getFrequency() const = 0;
-
-private:
-    // Technically, can have static members in interfaces, but considered bad design as interfaces define behavior not state.
-    // Static members introduce implementation details and hidden dependencies.
-};
-
-class LidarNode : public IRuntimeNode {
-public:
-    LidarNode(const std::string& name, std::unique_ptr<IDriver>&& driver, const double frequency) : name_(name), driver_(std::move(driver)), frequency_(frequency) {}
-
-    // Technically, unnecessary since compiler will generate this.
-    ~LidarNode() override = default;
-
-    // Copy Constructor.
-    // Technically, unnecessary since compiler will generate this.
-    LidarNode(const LidarNode&) = delete;
-
-    // Copy Assignment Operator.
-    // Technically, unnecessary since compiler will generate this.
-    LidarNode& operator=(const LidarNode&) = delete;
-
-    // Move Constructor.
-    // Technically, unnecessary since compiler will generate this.
-    // LidarNode(LidarNode&&) noexcept = default;
-    LidarNode(LidarNode&& other) noexcept : name_(std::move(other.name_)), driver_(std::move(other.driver_)), frequency_(other.frequency_) {}
-
-    // Move Assignment Operator.
-    // Technically, unnecessary since compiler will generate this.
-    // LidarNode& operator=(LidarNode&&) noexcept = default;
-    LidarNode& operator=(LidarNode&& other) noexcept {
-        if (this != &other) {
-            name_ = std::move(other.name_);
-            driver_ = std::move(other.driver_);
-            frequency_ = other.frequency_;
-        }
-
-        return *this;
-    }
-
-    void publish() final {
-        auto start = std::chrono::high_resolution_clock::now();
-
-        // TODO: Add work here.
-
-        auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarNode " << name_ << " publish() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
-    }
-
-    void execute() final {
-        auto start = std::chrono::high_resolution_clock::now();
-
-        driver_->read();
-        publish();
-
-        auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarNode " << name_ << " execute() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
-    }
-
-    std::string getName() const final {
-        return name_;
-    }
-
-    double getFrequency() const final {
-        return frequency_;
-    }
-
-private:
-    std::string name_;
-    double frequency_{0.0};
-    std::unique_ptr<IDriver> driver_;
-};
+#include "IDriver.hpp"
+#include "IRuntimeNode.hpp"
 
 class RuntimeGraph {
 public:
@@ -313,35 +175,3 @@ private:
     std::vector<std::unique_ptr<IRuntimeNode>> nodes_;
     std::atomic<bool> running_{false};
 };
-
-int main (int argc, char* argv[]) {
-    std::unique_ptr<IDriver> lidar_driver_1 = std::make_unique<LidarDriver>(1000);
-    std::unique_ptr<IDriver> lidar_driver_2 = std::make_unique<LidarDriver>(1111);
-
-    std::unique_ptr<IRuntimeNode> lidar_node_1 = std::make_unique<LidarNode>("lidar_node_1", std::move(lidar_driver_1), 10.0);
-    // lidar_driver_1 is nullptr after move, so cannot be used directly hereafter.
-    std::unique_ptr<IRuntimeNode> lidar_node_2 = std::make_unique<LidarNode>("lidar_node_2", std::move(lidar_driver_2), 20.0);
-    // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
-
-    RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    auto error_1 = runtime_graph.registerNode(std::move(lidar_node_1));
-
-    if (error_1) {
-        std::cerr << "Error registering node: " << *error_1 << "\n";
-    }
-
-    // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
-    auto error_2 = runtime_graph.registerNode(std::move(lidar_node_2));
-
-    if (error_2) {
-        std::cerr << "Error registering node: " << *error_2 << "\n";
-    }
-
-    // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
-    runtime_graph.run();
-
-    // Wait for user input to prevent the program from exiting immediately.
-    std::cin.get();
-
-    return 0;
-}
