@@ -250,8 +250,6 @@ public:
             std::lock_guard<std::mutex> lock(mtx_);
 
             if (!running_.load()) {
-                std::cout << "RuntimeGraph is not running. Cannot dispatch task.\n";
-
                 return "RuntimeGraph is not running. Cannot dispatch task.";
             }
 
@@ -326,17 +324,17 @@ int main (int argc, char* argv[]) {
     // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    auto error = runtime_graph.registerNode(std::move(lidar_node_1));
+    auto error_1 = runtime_graph.registerNode(std::move(lidar_node_1));
 
-    if (error) {
-        std::cerr << "Error registering node: " << *error << "\n";
+    if (error_1) {
+        std::cerr << "Error registering node: " << *error_1 << "\n";
     }
 
     // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
-    error = runtime_graph.registerNode(std::move(lidar_node_2));
+    auto error_2 = runtime_graph.registerNode(std::move(lidar_node_2));
 
-    if (error) {
-        std::cerr << "Error registering node: " << *error << "\n";
+    if (error_2) {
+        std::cerr << "Error registering node: " << *error_2 << "\n";
     }
 
     // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
