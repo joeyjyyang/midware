@@ -72,7 +72,7 @@ public:
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarDriver read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
+        std::cout << "LidarDriver " << uuid_ << " read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
     }
 
     uint32_t getUuid() const final {
@@ -94,6 +94,8 @@ public:
 
     virtual void execute() = 0;
 
+    virtual std::string getName() const = 0;
+
     virtual double getFrequency() const = 0;
 
 private:
@@ -103,7 +105,7 @@ private:
 
 class LidarNode : public IRuntimeNode {
 public:
-    LidarNode(std::unique_ptr<IDriver>&& driver, const double frequency) : driver_(std::move(driver)), frequency_(frequency) {}
+    LidarNode(const std::string& name, std::unique_ptr<IDriver>&& driver, const double frequency) : name_(name), driver_(std::move(driver)), frequency_(frequency) {}
 
     // Technically, unnecessary since compiler will generate this.
     ~LidarNode() override = default;
@@ -119,14 +121,16 @@ public:
     // Move Constructor.
     // Technically, unnecessary since compiler will generate this.
     // LidarNode(LidarNode&&) noexcept = default;
-    LidarNode(LidarNode&& other) noexcept : driver_(std::move(other.driver_)) {}
+    LidarNode(LidarNode&& other) noexcept : name_(std::move(other.name_)), driver_(std::move(other.driver_)), frequency_(other.frequency_) {}
 
     // Move Assignment Operator.
     // Technically, unnecessary since compiler will generate this.
     // LidarNode& operator=(LidarNode&&) noexcept = default;
     LidarNode& operator=(LidarNode&& other) noexcept {
         if (this != &other) {
+            name_ = std::move(other.name_);
             driver_ = std::move(other.driver_);
+            frequency_ = other.frequency_;
         }
 
         return *this;
@@ -138,7 +142,7 @@ public:
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarNode publish() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
+        std::cout << "LidarNode " << name_ << " publish() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
     }
 
     void execute() final {
@@ -148,7 +152,11 @@ public:
         publish();
 
         auto end = std::chrono::high_resolution_clock::now();
-        std::cout << "LidarNode execute() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
+        std::cout << "LidarNode " << name_ << " execute() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
+    }
+
+    std::string getName() const final {
+        return name_;
     }
 
     double getFrequency() const final {
@@ -156,6 +164,7 @@ public:
     }
 
 private:
+    std::string name_;
     double frequency_{0.0};
     std::unique_ptr<IDriver> driver_;
 };
@@ -194,6 +203,7 @@ public:
                             // Execute the task outside of the lock to allow other threads to access the queue.
                             task();
                         }
+                        // Need this to allow threads to exit while loop and become joinable to terminate gracefully.
                         else if (!running_.load()) {
                             return;
                         }
@@ -211,6 +221,8 @@ public:
 
         for (auto& thread : thread_pool_) {
             if (thread.joinable()) {
+                std::cout << "Thread " << thread.get_id() << " joined.\n";
+
                 thread.join();
             }
         }
@@ -222,6 +234,8 @@ public:
     }
 
     void registerNode(std::unique_ptr<IRuntimeNode>&& node) {
+        std::cout << "Registering node: " << node->getName() << " with frequency: " << node->getFrequency() << " Hz\n";
+
         nodes_.emplace_back(std::move(node));
     }
 
@@ -279,13 +293,16 @@ private:
 int main (int argc, char* argv[]) {
     std::unique_ptr<IDriver> lidar_driver = std::make_unique<LidarDriver>(12345);
 
-    std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>(std::move(lidar_driver), 10.0);
+    std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>("lidar_node", std::move(lidar_driver), 10.0);
+    // lidar_driver is nullptr after move, so cannot be used directly hereafter.
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
-    // lidar_driver is nullptr after move, so cannot be used directly hereafter.
-    //runtime_graph.registerNode(std::move(lidar_node));
-    // lidar_node is nullptr after move, so cannot be used directly hereafter.run(
+    runtime_graph.registerNode(std::move(lidar_node));
+    // lidar_node is nullptr after move, so cannot be used directly hereafter.
     //runtime_graph.run();
+
+    // Wait for user input to prevent the program from exiting immediately.
+    std::cin.get();
 
     return 0;
 }
