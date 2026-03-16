@@ -69,7 +69,7 @@ public:
     void read() final {
         auto start = std::chrono::high_resolution_clock::now();
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        //std::this_thread::sleep_for(std::chrono::seconds(1));
 
         auto end = std::chrono::high_resolution_clock::now();
         std::cout << "LidarDriver " << uuid_ << " read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
@@ -139,7 +139,7 @@ public:
     void publish() final {
         auto start = std::chrono::high_resolution_clock::now();
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        //std::this_thread::sleep_for(std::chrono::seconds(1));
 
         auto end = std::chrono::high_resolution_clock::now();
         std::cout << "LidarNode " << name_ << " publish() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
@@ -258,8 +258,10 @@ public:
                     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.0 / node->getFrequency())));
 
                     auto end = std::chrono::high_resolution_clock::now();
-                    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " microseconds\n";
+                    std::cout << "RuntimeGraph dispatchTask() for " << node->getName() << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
                 }
+
+                std::cout << "Exiting task loop for node: " << node->getName() << "\n";
             });
         }
     }
@@ -291,15 +293,15 @@ private:
 };
 
 int main (int argc, char* argv[]) {
-    std::unique_ptr<IDriver> lidar_driver = std::make_unique<LidarDriver>(12345);
+    std::unique_ptr<IDriver> lidar_driver = std::make_unique<LidarDriver>(1000);
 
-    std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>("lidar_node", std::move(lidar_driver), 10.0);
+    std::unique_ptr<IRuntimeNode> lidar_node = std::make_unique<LidarNode>("lidar_node_1", std::move(lidar_driver), 10.0);
     // lidar_driver is nullptr after move, so cannot be used directly hereafter.
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
     runtime_graph.registerNode(std::move(lidar_node));
     // lidar_node is nullptr after move, so cannot be used directly hereafter.
-    //runtime_graph.run();
+    runtime_graph.run();
 
     // Wait for user input to prevent the program from exiting immediately.
     std::cin.get();
