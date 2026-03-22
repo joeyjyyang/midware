@@ -19,46 +19,13 @@
 
 class RuntimeGraph {
 public:
-    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
-    explicit RuntimeGraph(const unsigned int num_threads) : num_threads_(num_threads) {
-        std::cout << "RuntimeGraph constructed called with " << num_threads_ << " threads.\n";
+    // As per Meyers Singleton pattern, return static local variable as reference instead of pointer.
+    static RuntimeGraph& getInstance(const unsigned int num_threads) {
+        std::cout << "Creating Singleton RuntimeGraph instance...\n";
 
-        running_.store(true);
+        static RuntimeGraph instance(num_threads);
 
-        for (unsigned int i = 0; i < num_threads_; ++i) {
-            // More efficient than thread_pool_.emplace_back(std::thread([this]() { ... })) since it constructs the thread in place after forwarding the lambda to the thread constructor, avoiding an extra move/copy of the thread object.
-            thread_pool_.emplace_back([this]() {
-                std::cout << "Thread " << std::this_thread::get_id() << " started.\n";
-
-                while (true) {
-                    std::function<void()> task;
-
-                    {
-                        std::unique_lock<std::mutex> lock(mtx_);
-
-                        // If no tasks, release the lock and wait until a task is added to the queue. The lambda predicate ensures that spurious wakeups don't cause the thread to proceed without a task.
-                        // If tasks, acquire the lock, pop a task from the queue, release the lock, and execute it. This allows multiple threads to efficiently wait for and process tasks without busy-waiting.
-                        cv_.wait(lock, [this]() {
-                            // Also wake threads if running_ is false to allow them to exit gracefully.
-                            return !task_queue_.empty() || !running_.load();
-                        });
-
-                        // Thread is now awake; check which condition caused the wakeup and handle it appropriately.
-                        if (!task_queue_.empty()) {
-                            task = std::move(task_queue_.front());
-                            task_queue_.pop();
-                            lock.unlock();
-                            // Execute the task outside of the lock to allow other threads to access the queue.
-                            task();
-                        }
-                        // Need this to allow threads to exit while loop and become joinable to terminate gracefully.
-                        else if (!running_.load()) {
-                            return;
-                        }
-                    }
-                }
-            });
-        }
+        return instance;
     }
 
     ~RuntimeGraph() {
@@ -78,6 +45,10 @@ public:
                 thread.join();
             }
         }
+    }
+
+    unsigned int getInstanceCount() const {
+        return instance_count_;
     }
 
     void stop() {
@@ -167,6 +138,49 @@ public:
     RuntimeGraph& operator=(RuntimeGraph&&) noexcept = delete;
 
 private:
+    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
+    explicit RuntimeGraph(const unsigned int num_threads) : num_threads_(num_threads) {
+        std::cout << "RuntimeGraph constructed called with " << num_threads_ << " threads.\n";
+
+        instance_count_++;
+        running_.store(true);
+
+        for (unsigned int i = 0; i < num_threads_; ++i) {
+            // More efficient than thread_pool_.emplace_back(std::thread([this]() { ... })) since it constructs the thread in place after forwarding the lambda to the thread constructor, avoiding an extra move/copy of the thread object.
+            thread_pool_.emplace_back([this]() {
+                std::cout << "Thread " << std::this_thread::get_id() << " started.\n";
+
+                while (true) {
+                    std::function<void()> task;
+
+                    {
+                        std::unique_lock<std::mutex> lock(mtx_);
+
+                        // If no tasks, release the lock and wait until a task is added to the queue. The lambda predicate ensures that spurious wakeups don't cause the thread to proceed without a task.
+                        // If tasks, acquire the lock, pop a task from the queue, release the lock, and execute it. This allows multiple threads to efficiently wait for and process tasks without busy-waiting.
+                        cv_.wait(lock, [this]() {
+                            // Also wake threads if running_ is false to allow them to exit gracefully.
+                            return !task_queue_.empty() || !running_.load();
+                        });
+
+                        // Thread is now awake; check which condition caused the wakeup and handle it appropriately.
+                        if (!task_queue_.empty()) {
+                            task = std::move(task_queue_.front());
+                            task_queue_.pop();
+                            lock.unlock();
+                            // Execute the task outside of the lock to allow other threads to access the queue.
+                            task();
+                        }
+                        // Need this to allow threads to exit while loop and become joinable to terminate gracefully.
+                        else if (!running_.load()) {
+                            return;
+                        }
+                    }
+                }
+            });
+        }
+    }
+
     unsigned int num_threads_;
     std::mutex mtx_;
     std::condition_variable cv_;
@@ -174,4 +188,6 @@ private:
     std::queue<std::function<void()>> task_queue_;
     std::vector<std::unique_ptr<IRuntimeNode>> nodes_;
     std::atomic<bool> running_{false};
+    // Use inline static to declare and define static member variable in the header file without violating the One Definition Rule (ODR).
+    inline static unsigned int instance_count_{0};
 };
