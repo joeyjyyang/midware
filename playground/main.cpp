@@ -15,19 +15,19 @@ int main (int argc, char* argv[]) {
 
     RuntimeGraph runtime_graph(std::thread::hardware_concurrency());
     std::optional<std::string> error_1 = runtime_graph.registerNode(std::move(lidar_node_1));
+    // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
 
     if (error_1) {
         std::cerr << "Error registering node: " << *error_1 << "\n";
     }
 
-    // lidar_node_1 are nullptr after move, so cannot be used directly hereafter.
     std::optional<std::string> error_2 = runtime_graph.registerNode(std::move(lidar_node_2));
+    // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
 
     if (error_2) {
         std::cerr << "Error registering node: " << *error_2 << "\n";
     }
 
-    // lidar_node_2 are nullptr after move, so cannot be used directly hereafter.
     runtime_graph.run();
 
     // Wait for user input to prevent the program from exiting immediately.
