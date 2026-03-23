@@ -13,7 +13,8 @@ int main (int argc, char* argv[]) {
     std::unique_ptr<IRuntimeNode> lidar_node_2 = std::make_unique<LidarNode>("lidar_node_2", std::move(lidar_driver_2), 20.0);
     // lidar_driver_2 is nullptr after move, so cannot be used directly hereafter.
 
-    RuntimeGraph& runtime_graph = RuntimeGraph::getInstance(std::thread::hardware_concurrency());
+    RuntimeGraph::initialize(std::thread::hardware_concurrency());
+    RuntimeGraph& runtime_graph = RuntimeGraph::getInstance();
 
     std::cout << "Current RuntimeGraph instance count: " << runtime_graph.getInstanceCount() << "\n";
 

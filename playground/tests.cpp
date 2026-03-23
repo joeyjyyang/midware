@@ -77,7 +77,8 @@ void test_lidar_node_calls_driver_read() {
 }
 
 void test_register_null_node_returns_error() {
-    RuntimeGraph& graph = RuntimeGraph::getInstance(1);
+    RuntimeGraph::initialize(1);
+    RuntimeGraph& graph = RuntimeGraph::getInstance();
     std::optional<std::string> error = graph.registerNode(nullptr);
 
     assert(error.has_value());
@@ -86,7 +87,8 @@ void test_register_null_node_returns_error() {
 }
 
 void test_register_duplicate_node_returns_error() {
-    RuntimeGraph& graph = RuntimeGraph::getInstance(1);
+    RuntimeGraph::initialize(1);
+    RuntimeGraph& graph = RuntimeGraph::getInstance();
     std::unique_ptr<IRuntimeNode> mock_1 = std::make_unique<MockNode>("node_1", 10.0);
     std::unique_ptr<IRuntimeNode> mock_2 = std::make_unique<MockNode>("node_1", 10.0);
 
@@ -99,7 +101,8 @@ void test_register_duplicate_node_returns_error() {
 }
 
 void test_dispatch_task_after_stop_returns_error() {
-    RuntimeGraph& graph = RuntimeGraph::getInstance(1);
+    RuntimeGraph::initialize(1);
+    RuntimeGraph& graph = RuntimeGraph::getInstance();
     graph.stop();
 
     std::optional<std::string> error = graph.dispatchTask([]() {});

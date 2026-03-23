@@ -19,11 +19,31 @@
 
 class RuntimeGraph {
 public:
-    // As per Meyers Singleton pattern, return static local variable as reference instead of pointer.
-    static RuntimeGraph& getInstance(const unsigned int num_threads) {
-        std::cout << "Creating Singleton RuntimeGraph instance...\n";
+    // Static methods can only operate on static member variables, not instance variables.
+    static void initialize(const unsigned int num_threads) {
+        if (initialized_.load()) {
+            std::cout << "RuntimeGraph is already initialized. Ignoring subsequent initialization call.\n";
 
-        static RuntimeGraph instance(num_threads);
+            return;
+        }
+
+        num_threads_ = num_threads;
+        initialized_.store(true);
+    }
+
+    // Static methods can only operate on static member variables, not instance variables.    
+    // As per Meyers Singleton pattern, return static local variable as reference instead of pointer.
+    static RuntimeGraph& getInstance() {
+        if (!initialized_.load()) {
+            std::cout << "RuntimeGraph is not initialized.\n";
+
+            throw std::runtime_error("RuntimeGraph not initialized");
+        }
+
+        std::cout << "Getting RuntimeGraph Singleton instance...\n";
+
+        // Static local variable is initialized only once in process, and is thread-safe; subsequent calls will return the same instance.
+        static RuntimeGraph instance;
 
         return instance;
     }
@@ -138,9 +158,8 @@ public:
     RuntimeGraph& operator=(RuntimeGraph&&) noexcept = delete;
 
 private:
-    // Mark single argument constructors as explicit to prevent unintended implicit conversions.
-    explicit RuntimeGraph(const unsigned int num_threads) : num_threads_(num_threads) {
-        std::cout << "RuntimeGraph constructed called with " << num_threads_ << " threads.\n";
+    RuntimeGraph() {
+        std::cout << "Creating RuntimeGraph with " << num_threads_ << " threads.\n";
 
         instance_count_++;
         running_.store(true);
@@ -181,13 +200,15 @@ private:
         }
     }
 
-    unsigned int num_threads_;
+    std::atomic<bool> running_{false};
+    // Use inline static to declare and define static member variable in the header file without violating the One Definition Rule (ODR).
+    inline static std::atomic<bool> initialized_{false};
+    inline static unsigned int num_threads_{0};
+    inline static unsigned int instance_count_{0};
+
     std::mutex mtx_;
     std::condition_variable cv_;
     std::vector<std::thread> thread_pool_;
     std::queue<std::function<void()>> task_queue_;
     std::vector<std::unique_ptr<IRuntimeNode>> nodes_;
-    std::atomic<bool> running_{false};
-    // Use inline static to declare and define static member variable in the header file without violating the One Definition Rule (ODR).
-    inline static unsigned int instance_count_{0};
 };
