@@ -12,7 +12,7 @@ public:
     explicit LidarDriver(const uint32_t uuid) : uuid_(uuid) {}
 
     // Technically, unnecessary since compiler will generate this.
-    ~LidarDriver() override = default;
+    ~LidarDriver() override final = default;
 
     // Copy Constructor.
     // Technically, unnecessary since compiler will generate this.
@@ -30,7 +30,7 @@ public:
     // Technically, unnecessary since compiler will generate this.
     LidarDriver& operator=(LidarDriver&&) noexcept = default;
 
-    void read() final {
+    void read() override final {
         auto start = std::chrono::high_resolution_clock::now();
 
         // TODO: Add work here.
@@ -39,7 +39,7 @@ public:
         std::cout << "LidarDriver " << uuid_ << " read() took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " milliseconds\n";
     }
 
-    uint32_t getUuid() const final {
+    uint32_t getUuid() const override final {
         return uuid_;
     }
 

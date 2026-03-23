@@ -192,6 +192,8 @@ private:
                         }
                         // Need this to allow threads to exit while loop and become joinable to terminate gracefully.
                         else if (!running_.load()) {
+                            // Lock will automatically be released when going out of scope at the end of this block.
+                            //lock.unlock.unlock()
                             return;
                         }
                     }

@@ -12,11 +12,11 @@
 
 class MockDriver : public IDriver {
 public:
-    void read() final {
+    void read() override final {
         read_count_++;
     }
 
-    uint32_t getUuid() const final {
+    uint32_t getUuid() const override final {
         return 0;
     }
 
@@ -32,19 +32,19 @@ class MockNode : public IRuntimeNode {
 public:
     explicit MockNode(const std::string& name, const double frequency) : name_(name), frequency_(frequency) {}
 
-    void publish() final {
+    void publish() override final {
         publish_count_++;
     }
 
-    void execute() final {
+    void execute() override final {
         execute_count_++;
     }
 
-    std::string getName() const final {
+    std::string getName() const override final {
         return name_;
     }
 
-    double getFrequency() const final {
+    double getFrequency() const override final {
         return frequency_;
     }
 
