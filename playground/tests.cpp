@@ -73,6 +73,7 @@ void test_lidar_node_calls_driver_read() {
     node.execute();
 
     assert(mock_ptr->getReadCount() == 1);
+
     std::cout << "PASS: test_lidar_node_calls_driver_read\n";
 }
 
@@ -83,6 +84,7 @@ void test_register_null_node_returns_error() {
 
     assert(error.has_value());
     assert(error->find("null") != std::string::npos);
+
     std::cout << "PASS: test_register_null_node_returns_error\n";
 }
 
@@ -97,6 +99,7 @@ void test_register_duplicate_node_returns_error() {
 
     assert(error.has_value());
     assert(error->find("duplicate") != std::string::npos);
+
     std::cout << "PASS: test_register_duplicate_node_returns_error\n";
 }
 
@@ -107,6 +110,7 @@ void test_dispatch_task_after_stop_returns_error() {
 
     std::optional<std::string> error = graph.dispatchTask([]() {});
     assert(error.has_value());
+
     std::cout << "PASS: test_dispatch_task_after_stop_returns_error\n";
 }
 
